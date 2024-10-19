@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xsm': '425px',
+      },
       animation: {
         fade: 'fadeIn .5s ease-in-out',
       },
