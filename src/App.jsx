@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaCircleNotch } from "react-icons/fa";
 import { FaXmark } from "react-icons/fa6";
 import { BsSortNumericDown, BsSortNumericUp } from "react-icons/bs";
@@ -7,22 +7,22 @@ import './App.css';
 
 const cx = (...classes) => classes.filter(Boolean).join(' ');
 
-function Square({ value, onSquareClick, className, isWinningSquare, xIsNext, winner }) {
+function Square({ value, onSquareClick, className, isWinningSquare, xIsNext }) {
   return (
     <button className={cx("flex items-center justify-center square", className)} onClick={onSquareClick}>
       <div className={`w-[90%] h-[90%] flex items-center justify-center
         ${isWinningSquare ? "bg-white shadow-lg scale-110 transform transition-transform ease-out duration-200" : ""}
         hover:bg-white rounded-xl sm:rounded-3xl hover:scale-110 transform 
         transition-transform ease-out duration-200 group`}>
-        {value === 'X' ? (
+        {value === 'O' ? (
           <FaCircleNotch className="text-red-500 w-12 h-12 xsm:w-16 xsm:h-16 sm:w-20 sm:h-20" />
-        ) : value === 'O' ? (
+        ) : value === 'X' ? (
           <FaXmark className="text-blue-500 w-14 h-14 xsm:w-24 xsm:h-24 sm:w-28 sm:h-28" />
         ) :
           xIsNext ? (
-            <FaCircleNotch className="group-hover:flex hidden text-zinc-500 w-12 h-12 xsm:w-16 xsm:h-16 sm:w-20 sm:h-20" />
-          ) : (
             <FaXmark className="group-hover:flex hidden text-zinc-500 w-14 h-14 xsm:w-24 xsm:h-24 sm:w-28 sm:h-28" />
+          ) : (
+            <FaCircleNotch className="group-hover:flex hidden text-zinc-500 w-12 h-12 xsm:w-16 xsm:h-16 sm:w-20 sm:h-20" />
           )
         }
       </div>
@@ -32,7 +32,7 @@ function Square({ value, onSquareClick, className, isWinningSquare, xIsNext, win
 
 function Board({ xIsNext, squares, onPlay, winner }) {
   function handleClick(i) {
-    if (calculateWinner(squares) || squares[i]) {
+    if (calculateWinner(squares) || squares[i] || winner) {
       return;
     }
     const nextSquares = squares.slice();
@@ -69,7 +69,6 @@ function Board({ xIsNext, squares, onPlay, winner }) {
                   border-white rounded-none hover:border-white p-2 focus:outline-none`}
                 isWinningSquare={isWinningSquare}
                 xIsNext={xIsNext}
-                winner={winner}
               />
             );
           })}
@@ -83,12 +82,21 @@ export default function Game() {
   const [history, setHistory] = useState([{ squares: Array(9).fill(null), location: null }]);
   const [showHistory, setShowHistory] = useState(true);
   const [currentPlayer, setCurrentPlayer] = useState('X');
+  const [winner, setWinner] = useState(null);
   const [currentMove, setCurrentMove] = useState(0);
   const [isAscending, setAscending] = useState(true);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove].squares;
 
   function handlePlay(nextSquares, index) {
+    const result = calculateWinner(nextSquares);
+    if (result) {
+      setWinner(result.winner);
+    }
+    const isDraw = nextSquares.every(square => square !== null);
+    if (isDraw && !result) {
+      setWinner("Draw");
+    }
     const row = Math.floor(index / 3);
     const col = index % 3;
     const location = `(${row + 1}, ${col + 1})`;
@@ -111,6 +119,7 @@ export default function Game() {
     setHistory([{ squares: Array(9).fill(null), location: null }]);
     setCurrentMove(0);
     setCurrentPlayer('X');
+    setWinner(null);
   }
 
   const moves = history.map((step, move) => {
@@ -141,7 +150,7 @@ export default function Game() {
     <div className="game flex flex-col w-screen h-screen justify-center items-center">
       <h1 className="text-4xl font-bold mb-6">Tic Tac Toe</h1>
       <div className="game-board flex flex-col w-[300px] h-[300px] xsm:w-[400px] xsm:h-[400px] sm:w-[500px] sm:h-[500px] bg-indigo-100 items-center justify-center rounded-3xl border-[1px] border-white p-4 relative">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={calculateWinner(currentSquares)?.winner} />
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={winner} />
         <div className={`game-info absolute max-lg:hidden sm:-right-64 bg-indigo-50 h-[500px] w-56 rounded-3xl border ${showHistory ? 'animate-fade' : 'hidden'}`}>
           <button className="w-full h-16 bg-indigo-200 rounded-t-3xl rounded-b-none mb-2 group" onClick={() => setAscending(!isAscending)}>
             <div className='flex flex-row items-center justify-between'>
@@ -157,12 +166,29 @@ export default function Game() {
         </div>
       </div>
       <div className='flex justify-between w-[300px] xsm:w-[400px] sm:w-[500px] h-16 bg-indigo-200 mt-6 rounded-3xl p-2'>
-        <div className='flex flex-row w-[45%] h-full bg-indigo-50 rounded-xl items-center justify-between px-2 sm:px-4'>
-          <p className='text-xs xsm:text-base sm:text-lg font-bold text-nowrap'>Current Player: </p>
-          {currentPlayer === 'X' ? (
-            <FaCircleNotch className="text-red-500 w-4 h-4 xsm:w-6 xsm:h-6 sm:w-8 sm:h-8" />
+        <div className={`flex flex-row w-[45%] h-full ${winner ? 'bg-white' : 'bg-indigo-50 '} rounded-xl items-center px-2 sm:px-4`}>
+          {winner ? (
+            winner === 'Draw' ? (
+              <p className='flex w-full justify-center text-xs xsm:text-base sm:text-lg font-bold text-nowrap'>Draw Match 😵‍💫</p>
+            ) : (
+              <div className='flex w-full justify-between items-center'>
+                <p className='text-xs xsm:text-base sm:text-lg font-bold text-nowrap'>The Winner 🏆:</p>
+                {winner === 'X' ? (
+                  <FaXmark className="text-blue-500 w-6 h-6 xsm:w-8 xm:h-8 sm:w-10 sm:h-10" />
+                ) : (
+                  <FaCircleNotch className="text-red-500 w-4 h-4 xsm:w-6 xsm:h-6 sm:w-8 sm:h-8" />
+                )}
+              </div>
+            )
           ) : (
-            <FaXmark className="text-blue-500 w-6 h-6 xsm:w-8 xm:h-8 sm:w-10 sm:h-10" />
+            <div className='flex w-full justify-between items-center'>
+              <p className='text-xs xsm:text-base sm:text-lg font-bold text-nowrap'>Current Player:</p>
+              {currentPlayer === 'O' ? (
+                <FaCircleNotch className="text-red-500 w-4 h-4 xsm:w-6 xsm:h-6 sm:w-8 sm:h-8" />
+              ) : (
+                <FaXmark className="text-blue-500 w-6 h-6 xsm:w-8 xm:h-8 sm:w-10 sm:h-10" />
+              )}
+            </div>
           )}
         </div>
         <button
@@ -202,18 +228,16 @@ export default function Game() {
   );
 }
 
-
 function calculateWinner(squares) {
   const lines = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns`
     [0, 4, 8], [2, 4, 6],            // diagonals
   ];
-
   for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i];
     if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return { winner: squares[a], line: [a, b, c] }; // return both winner and winning line
+      return { winner: squares[a], line: [a, b, c] };
     }
   }
   return null;
