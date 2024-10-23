@@ -30,9 +30,9 @@ function Square({ value, onSquareClick, className, isWinningSquare, xIsNext }) {
   );
 }
 
-function Board({ xIsNext, squares, onPlay, winner }) {
+function Board({ xIsNext, squares, onPlay, handleWinner }) {
   function handleClick(i) {
-    if (calculateWinner(squares) || squares[i] || winner) {
+    if (calculateWinner(squares) || squares[i]) {
       return;
     }
     const nextSquares = squares.slice();
@@ -45,8 +45,8 @@ function Board({ xIsNext, squares, onPlay, winner }) {
   }
 
   const result = calculateWinner(squares);
-  const winningLine = result ? result.line : [];
-
+  const winningLine = result ? result?.line : [];
+  handleWinner(squares, result?.winner);
   return (
     <>
       {Array(3).fill(null).map((_, rowIndex) => (
@@ -89,22 +89,12 @@ export default function Game() {
   const currentSquares = history[currentMove].squares;
 
   function handlePlay(nextSquares, index) {
-    const result = calculateWinner(nextSquares);
-    if (result) {
-      setWinner(result.winner);
-    }
-    const isDraw = nextSquares.every(square => square !== null);
-    if (isDraw && !result) {
-      setWinner("Draw");
-    }
     const row = Math.floor(index / 3);
     const col = index % 3;
     const location = `(${row + 1}, ${col + 1})`;
-
     const nextHistory = [...history.slice(0, currentMove + 1), { squares: nextSquares, location }];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
-
     // Move the current player update here
     const nextPlayer = xIsNext ? 'O' : 'X';
     setCurrentPlayer(nextPlayer);
@@ -120,6 +110,15 @@ export default function Game() {
     setCurrentMove(0);
     setCurrentPlayer('X');
     setWinner(null);
+  }
+
+  const handleWinner = (squares, winner) => {
+    setWinner(winner);
+    const isDraw = squares.every(square => square !== null);
+    if (isDraw && !winner)
+    {
+      setWinner("Draw");
+    }
   }
 
   const moves = history.map((step, move) => {
@@ -150,7 +149,7 @@ export default function Game() {
     <div className="game flex flex-col w-screen h-screen justify-center items-center">
       <h1 className="text-4xl font-bold mb-6">Tic Tac Toe</h1>
       <div className="game-board flex flex-col w-[300px] h-[300px] xsm:w-[400px] xsm:h-[400px] sm:w-[500px] sm:h-[500px] bg-indigo-100 items-center justify-center rounded-3xl border-[1px] border-white p-4 relative">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={winner} />
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} winner={winner} handleWinner={handleWinner}/>
         <div className={`game-info absolute max-lg:hidden sm:-right-64 bg-indigo-50 h-[500px] w-56 rounded-3xl border ${showHistory ? 'animate-fade' : 'hidden'}`}>
           <button className="w-full h-16 bg-indigo-200 rounded-t-3xl rounded-b-none mb-2 group" onClick={() => setAscending(!isAscending)}>
             <div className='flex flex-row items-center justify-between'>
